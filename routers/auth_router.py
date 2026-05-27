@@ -7,6 +7,7 @@ from typing import Annotated
 
 from auth import create_access_token, hash_password, verify_password
 from database import get_conn
+from deps import clear_auth_cookie, set_auth_cookie
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -62,17 +63,11 @@ def login(
         raise HTTPException(status_code=403, detail="관리자 승인 대기 중입니다. 승인 후 로그인해 주세요.")
 
     token = create_access_token(username=row["username"], is_admin=bool(row["is_admin"]))
-    response.set_cookie(
-        key=COOKIE_NAME,
-        value=token,
-        httponly=True,
-        samesite="lax",
-        max_age=60 * 60 * 8,
-    )
+    set_auth_cookie(response, token)
     return {"message": "로그인 성공", "is_admin": bool(row["is_admin"])}
 
 
 @router.post("/logout")
 def logout(response: Response):
-    response.delete_cookie(COOKIE_NAME)
+    clear_auth_cookie(response)
     return {"message": "로그아웃 완료"}

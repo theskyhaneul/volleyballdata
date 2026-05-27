@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>관리자 계정 설정</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', 'Malgun Gothic', sans-serif;
+      background: #f0f4f8;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0;
+    }
+    .card {
+      background: #fff;
+      border-radius: 16px;
+      padding: 36px;
+      width: 100%;
+      max-width: 420px;
+      box-shadow: 0 8px 30px rgba(0,0,0,.1);
+    }
+    h1 { font-size: 1.2rem; margin-bottom: 6px; color: #1a1a2e; }
+    p.sub { font-size: .85rem; color: #718096; margin-bottom: 22px; }
+    label { display: block; font-size: .83rem; font-weight: 600; color: #4a5568; margin-bottom: 5px; }
+    input {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 8px;
+      margin-bottom: 14px;
+      font-size: .9rem;
+    }
+    .btn {
+      width: 100%;
+      padding: 12px;
+      border: none;
+      border-radius: 8px;
+      background: #0f3460;
+      color: #fff;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .msg { display: none; margin-top: 12px; padding: 10px; border-radius: 8px; font-size: .88rem; }
+    .msg.show { display: block; }
+    .msg.ok { background: #c6f6d5; color: #276749; }
+    .msg.err { background: #fff5f5; color: #c53030; }
+    a { color: #0f3460; font-size: .85rem; }
+  </style>
+</head>
+<body>
+<div class="card">
+  <h1>관리자 계정 설정</h1>
+  <p class="sub">Render 배포 후 최초 1회 사용 · SETUP_KEY 필요</p>
+
+  <label>설정 키 (SETUP_KEY)</label>
+  <input type="password" id="setupKey" placeholder="Render 환경변수 SETUP_KEY" />
+
+  <label>관리자 아이디</label>
+  <input type="text" id="username" placeholder="예: admin" />
+
+  <label>관리자 비밀번호</label>
+  <input type="password" id="password" placeholder="6자 이상" />
+
+  <button class="btn" onclick="createAdmin()">관리자 생성 / 비밀번호 재설정</button>
+  <div class="msg" id="msg"></div>
+
+  <p style="margin-top:16px;text-align:center;">
+    <a href="/login">← 로그인으로</a>
+  </p>
+</div>
+
+<script>
+function show(text, ok) {
+  const el = document.getElementById('msg');
+  el.textContent = text;
+  el.className = 'msg show ' + (ok ? 'ok' : 'err');
+}
+
+async function createAdmin() {
+  const form = new FormData();
+  form.append('setup_key', document.getElementById('setupKey').value);
+  form.append('username', document.getElementById('username').value.trim());
+  form.append('password', document.getElementById('password').value);
+
+  try {
+    const res = await fetch('/api/setup-admin', { method: 'POST', body: form });
+    const data = await res.json();
+    if (!res.ok) {
+      const detail = data.detail;
+      const text = Array.isArray(detail) ? detail.map(d => d.msg || d).join(', ') : (detail || '실패');
+      show(text, false);
+      return;
+    }
+    show(data.message + ' — 3초 후 로그인 페이지로 이동합니다.', true);
+    setTimeout(() => { window.location.href = '/login'; }, 3000);
+  } catch {
+    show('서버 오류', false);
+  }
+}
+</script>
+</body>
+</html>

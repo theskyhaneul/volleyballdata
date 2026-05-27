@@ -107,6 +107,9 @@
   </div>
   <h1>배구 데이터 변환기</h1>
   <p class="sub">Data Volley → Dartfish CSV</p>
+  <p class="sub" style="margin-top:-18px;margin-bottom:20px;">
+    <a href="/setup" style="color:#0f3460;">관리자 최초 설정 (배포 후)</a>
+  </p>
 
   <div class="tab-switch">
     <button class="active" id="tabLoginBtn" onclick="switchTab('login')">로그인</button>
@@ -162,11 +165,16 @@ async function doLogin() {
   try {
     const res = await fetch('/auth/login', { method: 'POST', body: form });
     const data = await res.json();
-    if (!res.ok) { showMsg('loginMsg', data.detail || '로그인 실패', 'error'); return; }
+    if (!res.ok) {
+      const detail = data.detail;
+      const text = Array.isArray(detail)
+        ? detail.map(d => (typeof d === 'string' ? d : d.msg)).join(', ')
+        : (detail || '로그인 실패');
+      showMsg('loginMsg', text, 'error');
+      return;
+    }
     showMsg('loginMsg', '로그인 성공! 이동 중...', 'success');
-    setTimeout(() => {
-      window.location.href = data.is_admin ? '/admin' : '/';
-    }, 600);
+    setTimeout(() => { window.location.href = '/'; }, 600);
   } catch {
     showMsg('loginMsg', '서버 오류가 발생했습니다.', 'error');
   }

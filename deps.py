@@ -2,11 +2,40 @@
 
 from __future__ import annotations
 
-from fastapi import HTTPException, Request
+import os
+
+from fastapi import HTTPException, Request, Response
 
 from auth import decode_token
 
 COOKIE_NAME = "access_token"
+
+
+def is_production() -> bool:
+    """Render 등 HTTPS 배포 환경 여부."""
+    return bool(os.environ.get("RENDER") or os.environ.get("RENDER_EXTERNAL_URL"))
+
+
+def set_auth_cookie(response: Response, token: str) -> None:
+    """HTTPS 배포 시 secure 쿠키 필수 (Render 로그인 유지)."""
+    response.set_cookie(
+        key=COOKIE_NAME,
+        value=token,
+        httponly=True,
+        samesite="lax",
+        secure=is_production(),
+        max_age=60 * 60 * 8,
+        path="/",
+    )
+
+
+def clear_auth_cookie(response: Response) -> None:
+    response.delete_cookie(
+        key=COOKIE_NAME,
+        path="/",
+        samesite="lax",
+        secure=is_production(),
+    )
 
 
 def get_token(request: Request) -> str | None:

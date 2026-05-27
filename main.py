@@ -66,6 +66,11 @@ async def login_page(request: Request):
     return templates.TemplateResponse("login.html", {"request": request})
 
 
+@app.get("/setup", response_class=HTMLResponse)
+async def setup_page(request: Request):
+    return templates.TemplateResponse("setup.html", {"request": request})
+
+
 @app.get("/admin", response_class=HTMLResponse)
 async def admin_page(request: Request):
     user = get_current_user(request)
@@ -111,9 +116,10 @@ async def setup_admin(
         exists = conn.execute("SELECT id FROM users WHERE username = ?", (username,)).fetchone()
         if exists:
             conn.execute(
-                "UPDATE users SET is_admin = 1, is_approved = 1 WHERE username = ?", (username,)
+                "UPDATE users SET is_admin = 1, is_approved = 1, password_hash = ? WHERE username = ?",
+                (hash_password(password), username),
             )
-            msg = f"'{username}' 계정에 관리자 권한을 부여했습니다."
+            msg = f"'{username}' 관리자 계정이 갱신되었습니다. (비밀번호 포함)"
         else:
             conn.execute(
                 "INSERT INTO users (username, password_hash, is_approved, is_admin) VALUES (?, ?, 1, 1)",
