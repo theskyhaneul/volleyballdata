@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import csv
 import io
+import os
 import sys
 import tempfile
 from pathlib import Path
@@ -93,6 +94,46 @@ async def index(
 
 
 # ── API: 현재 로그인 정보 ───────────────────────────
+
+@app.post("/api/setup-admin")
+async def setup_admin(
+    username: Annotated[str, Form()],
+    password: Annotated[str, Form()],
+    setup_key: Annotated[str, Form()],
+):
+    """최초 관리자 계정 1회 생성용. SETUP_KEY 환경변수가 설정된 경우에만 동작."""
+    expected = os.environ.get("SETUP_KEY", "")
+    if not expected:
+        raise HTTPException(status_code=403, detail="SETUP_KEY 환경변수가 설정되지 않았습니다.")
+    if setup_key != expected:
+        raise HTTPException(status_code=403, detail="설정 키가 올바르지 않습니다.")
+
+    from auth import hash_password
+    from database import get_conn
+
+    username = username.strip()
+    if len(username) < 3:
+        raise HTTPException(status_code=400, detail="아이디는 3자 이상이어야 합니다.")
+    if len(password) < 6:
+        raise HTTPException(status_code=400, detail="비밀번호는 6자 이상이어야 합니다.")
+
+    with get_conn() as conn:
+        exists = conn.execute("SELECT id FROM users WHERE username = ?", (username,)).fetchone()
+        if exists:
+            conn.execute(
+                "UPDATE users SET is_admin = 1, is_approved = 1 WHERE username = ?", (username,)
+            )
+            msg = f"'{username}' 계정에 관리자 권한을 부여했습니다."
+        else:
+            conn.execute(
+                "INSERT INTO users (username, password_hash, is_approved, is_admin) VALUES (?, ?, 1, 1)",
+                (username, hash_password(password)),
+            )
+            msg = f"관리자 계정 '{username}'이 생성되었습니다."
+        conn.commit()
+
+    return {"message": msg}
+
 
 @app.get("/api/me")
 async def me(access_token: Annotated[str | None, Cookie()] = None):
