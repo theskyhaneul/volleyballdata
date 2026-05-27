@@ -1,0 +1,70 @@
+================================================================================
+  Supabase 연결 오류 해결
+  tenant/user postgres.xxxxx not found
+================================================================================
+
+■ 원인 (거의 항상 이것)
+--------------------------------------------------------------------------------
+Render 의 DATABASE_URL 이 잘못되었습니다.
+
+1) 예시 그대로 넣음
+     postgres.xxxxx  ← xxxxx 는 예시입니다. 실제 프로젝트 ID 로 바꿔야 함
+
+2) Pooler 주소인데 사용자 이름이 postgres 만 있음
+     (잘못) postgresql://postgres:비밀번호@...pooler...:6543/postgres
+     (올바름) postgresql://postgres.abcdefghijk:비밀번호@...pooler...:6543/postgres
+              ↑ postgres. + 프로젝트 Reference ID
+
+
+■ 올바른 DATABASE_URL 다시 복사하기
+--------------------------------------------------------------------------------
+1. https://supabase.com → 본인 프로젝트
+2. 왼쪽 아래 톱니바퀴 Project Settings → Database
+3. Connection string
+4. [URI] 탭 선택
+5. 아래 중 하나 선택 (둘 다 가능):
+
+   【방법 A — 추천: Direct connection】
+   - Type: Direct connection
+   - [Copy] 클릭
+   - 형태 예:
+     postgresql://postgres:[비밀번호]@db.xxxxxxxxxx.supabase.co:5432/postgres
+   - 사용자 이름: postgres (점 없음)
+   - 호스트: db.xxxxx.supabase.co
+
+   【방법 B: Transaction pooler】
+   - Type: Transaction pooler
+   - [Copy] 클릭
+   - 형태 예:
+     postgresql://postgres.abcdefghijk:[비밀번호]@aws-0-ap-northeast-1.pooler.supabase.com:6543/postgres
+   - 사용자 이름: postgres.프로젝트ID (반드시 점 포함)
+
+6. 비밀번호에 특수문자(@, #, % 등)가 있으면
+   Supabase 화면에서 [Reveal] 후 복사한 값을 그대로 쓰세요.
+   (직접 타이핑하지 말 것)
+
+7. Render → Environment → DATABASE_URL 값 전체를 새로 붙여넣기
+8. Save → Manual Deploy
+
+
+■ 프로젝트 ID 확인하는 법
+--------------------------------------------------------------------------------
+Supabase 주소창:
+  https://supabase.com/dashboard/project/abcdefghijklmnop
+                                      ↑ 이 부분이 Reference ID
+
+Connection string 의 사용자 이름:
+  postgres.abcdefghijklmnop
+
+
+■ 연결 확인
+--------------------------------------------------------------------------------
+배포 후:
+  https://본인주소.onrender.com/health
+
+  {"status":"ok","database":"postgres"}  → 성공
+
+여전히 실패하면 Direct connection (5432, db.xxx.supabase.co) 으로 시도하세요.
+
+
+================================================================================

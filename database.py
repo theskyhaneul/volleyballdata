@@ -7,6 +7,7 @@ import sqlite3
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Iterator
+from urllib.parse import urlparse
 
 try:
     from dotenv import load_dotenv
@@ -40,12 +41,35 @@ CREATE TABLE IF NOT EXISTS users (
 """
 
 
+def _validate_postgres_url(url: str) -> None:
+    """자주 나는 Supabase 연결 문자열 오류를 미리 안내."""
+    lowered = url.lower()
+    if "xxxxx" in lowered or "your-password" in lowered or "your_password" in lowered:
+        raise RuntimeError(
+            "DATABASE_URL에 예시 값(xxxxx 등)이 그대로 있습니다. "
+            "Supabase 대시보드에서 Connection string을 다시 복사해 Render에 넣으세요."
+        )
+
+    parsed = urlparse(url)
+    host = parsed.hostname or ""
+    user = parsed.username or ""
+
+    if "pooler.supabase.com" in host and user == "postgres":
+        raise RuntimeError(
+            "Transaction/Session pooler(포트 6543/5432)는 사용자 이름이 "
+            "'postgres'가 아니라 'postgres.프로젝트ID' 형식이어야 합니다. "
+            "Supabase → Project Settings → Database → Connection string → URI 에서 "
+            "표시되는 전체 문자열을 그대로 복사하세요."
+        )
+
+
 def _postgres_url() -> str | None:
     url = os.environ.get("DATABASE_URL", "").strip()
     if not url:
         return None
     if url.startswith("postgres://"):
         url = "postgresql://" + url[len("postgres://") :]
+    _validate_postgres_url(url)
     if "sslmode=" not in url:
         url += ("&" if "?" in url else "?") + "sslmode=require"
     return url
