@@ -9,22 +9,26 @@
     body { font-family: 'Segoe UI', 'Malgun Gothic', sans-serif; background: #f0f4f8; color: #1a1a2e; }
 
     header {
-      background: linear-gradient(135deg, #1a1a2e 0%, #0f3460 100%);
-      color: #fff;
-      padding: 18px 32px;
+      background: #ffffff;
+      color: #1a1a2e;
+      padding: 20px 32px;
       display: flex;
       align-items: center;
       justify-content: space-between;
+      box-shadow: 0 1px 8px rgba(0,0,0,.08);
+      border-bottom: 1px solid #e2e8f0;
     }
-    .header-left { display: flex; align-items: center; gap: 12px; }
-    .header-left h1 { font-size: 1.1rem; font-weight: 700; }
+    .header-left { display: flex; align-items: center; gap: 14px; flex: 1; }
+    .header-left h1 { font-size: 1.35rem; font-weight: 700; letter-spacing: -.3px; color: #1a1a2e; }
+    .header-left p { font-size: .8rem; color: #4a5568; margin-top: 2px; }
     .brand-logo {
-      height: 40px;
+      height: 44px;
       width: auto;
       display: block;
       object-fit: contain;
+      flex-shrink: 0;
     }
-    .header-right { display: flex; gap: 10px; }
+    .header-right { display: flex; gap: 10px; align-items: center; }
 
     .btn {
       padding: 8px 18px;
@@ -33,10 +37,18 @@
       font-size: .85rem;
       font-weight: 600;
       cursor: pointer;
-      transition: opacity .15s;
+      transition: opacity .15s, background .15s;
     }
-    .btn:hover { opacity: .82; }
-    .btn-light   { background: rgba(255,255,255,.15); color: #fff; border: 1px solid rgba(255,255,255,.3); }
+    .btn:hover { opacity: .88; }
+    .btn-light {
+      padding: 6px 14px;
+      border: 1.5px solid #cbd5e0;
+      border-radius: 7px;
+      background: #f7fafc;
+      color: #1a1a2e;
+      font-size: .82rem;
+    }
+    .btn-light:hover { background: #edf2f7; opacity: 1; }
     .btn-approve { background: #276749; color: #fff; }
     .btn-reject  { background: #744210; color: #fff; }
     .btn-delete  { background: #9b2c2c; color: #fff; }
@@ -117,7 +129,10 @@
 <header>
   <div class="header-left">
     <img src="/static/dartfish-logo.png" alt="Dartfish" class="brand-logo" />
-    <h1>관리자 페이지</h1>
+    <div>
+      <h1>배구 데이터 변환기</h1>
+      <p>관리자 · 사용자 승인</p>
+    </div>
   </div>
   <div class="header-right">
     <button class="btn btn-light" onclick="window.location.href='/'">← 메인으로</button>
