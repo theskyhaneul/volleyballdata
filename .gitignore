@@ -5,3 +5,9 @@ __pycache__/
 .Python
 .env
 users.db
+SETUP_KEY_운영메모.txt
+SUPABASE_1_프로젝트설정.txt
+.env
+.env.*
+!.env.example
+관리자.txt
