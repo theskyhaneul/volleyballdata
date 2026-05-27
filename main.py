@@ -14,15 +14,14 @@ ROOT = Path(__file__).resolve().parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from fastapi import Cookie, FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from starlette.requests import Request
 from typing import Annotated
 
-from auth import decode_token
 from database import init_db
+from deps import get_current_user, require_login
 from routers.auth_router import router as auth_router
 from routers.admin_router import router as admin_router
 
@@ -51,40 +50,24 @@ app.include_router(admin_router)
 
 init_db()
 
-COOKIE_NAME = "access_token"
-
 
 @app.get("/health")
 async def health():
     return {"status": "ok"}
 
 
-# ── 인증 헬퍼 ─────────────────────────────────────
-
-def _get_current_user(token: str | None) -> dict | None:
-    if not token:
-        return None
-    return decode_token(token)
-
-
 # ── 페이지 라우트 ──────────────────────────────────
 
 @app.get("/login", response_class=HTMLResponse)
-async def login_page(
-    request: Request,
-    access_token: Annotated[str | None, Cookie()] = None,
-):
-    if _get_current_user(access_token):
+async def login_page(request: Request):
+    if get_current_user(request):
         return RedirectResponse("/")
     return templates.TemplateResponse("login.html", {"request": request})
 
 
 @app.get("/admin", response_class=HTMLResponse)
-async def admin_page(
-    request: Request,
-    access_token: Annotated[str | None, Cookie()] = None,
-):
-    user = _get_current_user(access_token)
+async def admin_page(request: Request):
+    user = get_current_user(request)
     if not user:
         return RedirectResponse("/login")
     if not user.get("admin"):
@@ -93,11 +76,8 @@ async def admin_page(
 
 
 @app.get("/", response_class=HTMLResponse)
-async def index(
-    request: Request,
-    access_token: Annotated[str | None, Cookie()] = None,
-):
-    if not _get_current_user(access_token):
+async def index(request: Request):
+    if not get_current_user(request):
         return RedirectResponse("/login")
     return templates.TemplateResponse("index.html", {"request": request})
 
@@ -145,20 +125,11 @@ async def setup_admin(
 
 
 @app.get("/api/me")
-async def me(access_token: Annotated[str | None, Cookie()] = None):
-    user = _get_current_user(access_token)
+async def me(request: Request):
+    user = get_current_user(request)
     if not user:
         raise HTTPException(status_code=401, detail="로그인이 필요합니다.")
     return {"username": user["sub"], "is_admin": user.get("admin", False)}
-
-
-# ── 공통 유틸 ─────────────────────────────────────
-
-def _require_login(token: str | None) -> dict:
-    user = _get_current_user(token)
-    if not user:
-        raise HTTPException(status_code=401, detail="로그인이 필요합니다.")
-    return user
 
 
 def _dvw_from_upload(upload: UploadFile):
@@ -175,11 +146,8 @@ def _dvw_from_upload(upload: UploadFile):
 # ── API: DVW 파싱 ─────────────────────────────────
 
 @app.post("/api/parse")
-async def parse_file(
-    file: UploadFile = File(...),
-    access_token: Annotated[str | None, Cookie()] = None,
-):
-    _require_login(access_token)
+async def parse_file(request: Request, file: UploadFile = File(...)):
+    require_login(request)
     try:
         dvw, filename = _dvw_from_upload(file)
     except Exception as exc:
@@ -260,11 +228,11 @@ async def parse_file(
 
 @app.post("/api/export-csv")
 async def export_csv(
+    request: Request,
     file: UploadFile = File(...),
     base_length: int = Form(0),
-    access_token: Annotated[str | None, Cookie()] = None,
 ):
-    _require_login(access_token)
+    require_login(request)
     try:
         dvw, filename = _dvw_from_upload(file)
     except Exception as exc:
