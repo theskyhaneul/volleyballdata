@@ -14,15 +14,16 @@
       min-height: 100vh;
     }
 
-    /* ── 헤더 ── */
+    /* ── 헤더 (로고 가독용 밝은 배경) ── */
     header {
-      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 60%, #0f3460 100%);
-      color: #fff;
+      background: #ffffff;
+      color: #1a1a2e;
       padding: 20px 32px;
       display: flex;
       align-items: center;
       gap: 14px;
-      box-shadow: 0 2px 12px rgba(0,0,0,.3);
+      box-shadow: 0 1px 8px rgba(0,0,0,.08);
+      border-bottom: 1px solid #e2e8f0;
     }
     header .logo { flex-shrink: 0; }
     .brand-logo {
@@ -31,8 +32,27 @@
       display: block;
       object-fit: contain;
     }
-    header h1 { font-size: 1.35rem; font-weight: 700; letter-spacing: -.3px; }
-    header p  { font-size: .8rem; opacity: .65; margin-top: 2px; }
+    header h1 { font-size: 1.35rem; font-weight: 700; letter-spacing: -.3px; color: #1a1a2e; }
+    header p  { font-size: .8rem; color: #4a5568; margin-top: 2px; }
+    #headerUser { color: #1a1a2e; }
+    #headerUser .header-admin-link {
+      color: #0f3460;
+      font-weight: 600;
+      text-decoration: none;
+    }
+    #headerUser .header-admin-link:hover { text-decoration: underline; }
+    #headerUser .header-username { color: #4a5568; }
+    #headerUser .header-logout-btn {
+      padding: 6px 14px;
+      border: 1.5px solid #cbd5e0;
+      border-radius: 7px;
+      background: #f7fafc;
+      color: #1a1a2e;
+      font-size: .82rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    #headerUser .header-logout-btn:hover { background: #edf2f7; }
 
     /* ── 메인 ── */
     main { max-width: 1200px; margin: 32px auto; padding: 0 16px; }
@@ -385,11 +405,11 @@
     const user = await res.json();
     const el = document.getElementById('headerUser');
     const adminLink = user.is_admin
-      ? `<a href="/admin" style="color:#90cdf4;font-weight:600;">관리자</a>` : '';
+      ? `<a href="/admin" class="header-admin-link">관리자</a>` : '';
     el.innerHTML = `
       ${adminLink}
-      <span style="opacity:.8;">👤 ${user.username}</span>
-      <button onclick="doLogout()" style="padding:6px 14px;border:1px solid rgba(255,255,255,.4);border-radius:7px;background:rgba(255,255,255,.12);color:#fff;font-size:.82rem;font-weight:600;cursor:pointer;">로그아웃</button>
+      <span class="header-username">👤 ${user.username}</span>
+      <button type="button" class="header-logout-btn" onclick="doLogout()">로그아웃</button>
     `;
   } catch { window.location.href = '/login'; }
 })();
