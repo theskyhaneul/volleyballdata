@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>배구 데이터 변환기</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', 'Malgun Gothic', sans-serif;
+      background: #f0f4f8;
+      color: #1a1a2e;
+      min-height: 100vh;
+    }
+
+    /* ── 헤더 ── */
+    header {
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 60%, #0f3460 100%);
+      color: #fff;
+      padding: 20px 32px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      box-shadow: 0 2px 12px rgba(0,0,0,.3);
+    }
+    header .logo { font-size: 28px; }
+    header h1 { font-size: 1.35rem; font-weight: 700; letter-spacing: -.3px; }
+    header p  { font-size: .8rem; opacity: .65; margin-top: 2px; }
+
+    /* ── 메인 ── */
+    main { max-width: 1200px; margin: 32px auto; padding: 0 16px; }
+
+    /* ── 업로드 카드 ── */
+    .upload-card {
+      background: #fff;
+      border-radius: 16px;
+      padding: 32px;
+      box-shadow: 0 4px 20px rgba(0,0,0,.08);
+      margin-bottom: 28px;
+    }
+    .upload-card h2 { font-size: 1rem; font-weight: 600; color: #444; margin-bottom: 18px; }
+
+    .drop-zone {
+      border: 2px dashed #a0aec0;
+      border-radius: 12px;
+      padding: 40px 24px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color .2s, background .2s;
+    }
+    .drop-zone:hover, .drop-zone.drag-over {
+      border-color: #0f3460;
+      background: #f0f6ff;
+    }
+    .drop-zone .icon { font-size: 40px; margin-bottom: 10px; }
+    .drop-zone p { color: #718096; font-size: .9rem; }
+    .drop-zone p span { color: #0f3460; font-weight: 600; cursor: pointer; }
+    .drop-zone input[type=file] { display: none; }
+
+    .file-selected {
+      margin-top: 12px;
+      padding: 10px 16px;
+      background: #ebf8ff;
+      border-radius: 8px;
+      font-size: .88rem;
+      color: #2b6cb0;
+      display: none;
+    }
+    .file-selected.show { display: flex; align-items: center; gap: 8px; }
+
+    .actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 20px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .btn {
+      padding: 10px 22px;
+      border: none;
+      border-radius: 8px;
+      font-size: .9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity .15s, transform .1s;
+    }
+    .btn:disabled { opacity: .45; cursor: not-allowed; }
+    .btn:not(:disabled):hover { opacity: .88; transform: translateY(-1px); }
+    .btn-primary { background: #0f3460; color: #fff; }
+    .btn-success { background: #276749; color: #fff; }
+    .btn-outline { background: transparent; border: 2px solid #0f3460; color: #0f3460; }
+
+    .base-length-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: .88rem;
+      color: #555;
+    }
+    .base-length-wrap input {
+      width: 80px;
+      padding: 8px 10px;
+      border: 1.5px solid #cbd5e0;
+      border-radius: 7px;
+      font-size: .88rem;
+    }
+
+    /* ── 로딩 ── */
+    #loading {
+      display: none;
+      text-align: center;
+      padding: 32px;
+      color: #666;
+      font-size: .95rem;
+    }
+    .spinner {
+      width: 40px; height: 40px;
+      border: 4px solid #e2e8f0;
+      border-top-color: #0f3460;
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      margin: 0 auto 12px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── 결과 영역 ── */
+    #result { display: none; }
+
+    /* ── 탭 ── */
+    .tab-bar {
+      display: flex;
+      gap: 4px;
+      border-bottom: 2px solid #e2e8f0;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+    .tab-btn {
+      padding: 10px 20px;
+      border: none;
+      background: none;
+      border-radius: 8px 8px 0 0;
+      font-size: .9rem;
+      font-weight: 600;
+      color: #718096;
+      cursor: pointer;
+      transition: color .15s, background .15s;
+      position: relative;
+      bottom: -2px;
+    }
+    .tab-btn.active {
+      color: #0f3460;
+      background: #fff;
+      border: 2px solid #e2e8f0;
+      border-bottom-color: #fff;
+    }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* ── 테이블 공통 ── */
+    .table-wrap {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 2px 12px rgba(0,0,0,.07);
+      overflow: auto;
+      max-height: 520px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: .85rem;
+    }
+    thead th {
+      position: sticky;
+      top: 0;
+      background: #1a1a2e;
+      color: #fff;
+      padding: 10px 14px;
+      text-align: left;
+      white-space: nowrap;
+      font-weight: 600;
+      cursor: pointer;
+      user-select: none;
+    }
+    thead th:hover { background: #0f3460; }
+    tbody tr:nth-child(even) { background: #f7fafc; }
+    tbody tr:hover { background: #ebf8ff; }
+    tbody td { padding: 8px 14px; white-space: nowrap; border-bottom: 1px solid #f0f0f0; }
+
+    /* ── 게임정보 ── */
+    .info-section {
+      background: #fff;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 16px;
+      box-shadow: 0 2px 12px rgba(0,0,0,.07);
+    }
+    .info-section h3 {
+      font-size: .95rem;
+      font-weight: 700;
+      color: #0f3460;
+      margin-bottom: 14px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    .kv-row { display: flex; gap: 8px; padding: 5px 0; font-size: .88rem; border-bottom: 1px solid #f5f5f5; }
+    .kv-key { color: #718096; min-width: 120px; font-weight: 500; }
+    .kv-val { color: #1a1a2e; }
+
+    /* ── 배지 ── */
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 99px;
+      font-size: .75rem;
+      font-weight: 600;
+    }
+    .badge-blue  { background: #bee3f8; color: #2b6cb0; }
+    .badge-green { background: #c6f6d5; color: #276749; }
+    .badge-gray  { background: #e2e8f0; color: #4a5568; }
+
+    /* ── 탭 안 팀 선택 ── */
+    .team-tabs { display: flex; gap: 8px; margin-bottom: 14px; }
+    .team-tab-btn {
+      padding: 7px 18px;
+      border: 1.5px solid #0f3460;
+      border-radius: 8px;
+      font-size: .85rem;
+      font-weight: 600;
+      cursor: pointer;
+      background: #fff;
+      color: #0f3460;
+      transition: background .15s, color .15s;
+    }
+    .team-tab-btn.active { background: #0f3460; color: #fff; }
+
+    /* ── 범례 ── */
+    .legend { font-size: .78rem; color: #a0aec0; margin-top: 10px; }
+
+    /* ── 에러 ── */
+    #error-box {
+      display: none;
+      background: #fff5f5;
+      border: 1.5px solid #fc8181;
+      border-radius: 10px;
+      padding: 14px 18px;
+      color: #c53030;
+      font-size: .9rem;
+      margin-bottom: 20px;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">🏐</div>
+  <div style="flex:1;">
+    <h1>배구 데이터 변환기</h1>
+    <p>Data Volley (.dvw) → Dartfish CSV</p>
+  </div>
+  <div id="headerUser" style="display:flex;align-items:center;gap:10px;font-size:.85rem;"></div>
+</header>
+
+<main>
+
+  <!-- 업로드 카드 -->
+  <div class="upload-card">
+    <h2>📂 DVW 파일 업로드</h2>
+
+    <div class="drop-zone" id="dropZone">
+      <div class="icon">📁</div>
+      <p>여기에 DVW 파일을 드래그하거나 <span id="browseBtn">클릭해서 선택</span>하세요</p>
+      <input type="file" id="fileInput" accept=".dvw" />
+    </div>
+
+    <div class="file-selected" id="fileSelected">
+      <span>📄</span>
+      <span id="fileName"></span>
+    </div>
+
+    <div class="actions">
+      <button class="btn btn-primary" id="parseBtn" disabled>🔍 파일 분석</button>
+
+      <div class="base-length-wrap">
+        <label for="baseLength">기본 길이 (초):</label>
+        <input type="number" id="baseLength" min="1" placeholder="예: 51" />
+      </div>
+
+      <button class="btn btn-outline" id="applyBaseBtn" disabled>적용</button>
+      <button class="btn btn-success" id="exportBtn" disabled>⬇️ CSV 다운로드</button>
+    </div>
+  </div>
+
+  <!-- 에러 박스 -->
+  <div id="error-box"></div>
+
+  <!-- 로딩 -->
+  <div id="loading">
+    <div class="spinner"></div>
+    <p>파일 분석 중...</p>
+  </div>
+
+  <!-- 결과 탭 -->
+  <div id="result">
+    <div class="tab-bar">
+      <button class="tab-btn active" data-tab="gameinfo">게임정보</button>
+      <button class="tab-btn" data-tab="game">게임데이터</button>
+      <button class="tab-btn" data-tab="players">선수/세트점수</button>
+      <button class="tab-btn" data-tab="combination">콤비네이션</button>
+      <button class="tab-btn" data-tab="setter">Setter Calls</button>
+    </div>
+
+    <!-- 게임정보 탭 -->
+    <div class="tab-panel active" id="tab-gameinfo"></div>
+
+    <!-- 게임데이터 탭 -->
+    <div class="tab-panel" id="tab-game">
+      <div class="table-wrap">
+        <table id="game-table">
+          <thead>
+            <tr>
+              <th>No</th><th>팀</th><th>선수이름</th>
+              <th>기본기술</th><th>타구유형</th><th>결과</th>
+              <th>콤비</th><th>타임</th><th>세트</th>
+            </tr>
+          </thead>
+          <tbody id="game-tbody"></tbody>
+        </table>
+      </div>
+      <p class="legend">※ LUp 줄 제외  ·  * = 홈, a~z = 어웨이</p>
+    </div>
+
+    <!-- 선수/세트점수 탭 -->
+    <div class="tab-panel" id="tab-players">
+      <div class="team-tabs">
+        <button class="team-tab-btn active" data-team="home" id="homeTabBtn">홈팀</button>
+        <button class="team-tab-btn" data-team="away" id="awayTabBtn">어웨이팀</button>
+      </div>
+      <div id="players-home-wrap"></div>
+      <div id="players-away-wrap" style="display:none;"></div>
+      <p class="legend">※ '-' : 해당 세트 기록 없음  ·  '*' : 미출전/특수 표기</p>
+    </div>
+
+    <!-- 콤비네이션 탭 -->
+    <div class="tab-panel" id="tab-combination">
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>코드</th><th>필드</th><th>설명</th><th>기타</th></tr>
+          </thead>
+          <tbody id="combo-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 세터콜 탭 -->
+    <div class="tab-panel" id="tab-setter">
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>코드</th><th>설명</th><th>기타</th></tr>
+          </thead>
+          <tbody id="setter-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div><!-- /result -->
+
+</main>
+
+<script>
+// ── 로그인 상태 표시 ───────────────────────────
+(async () => {
+  try {
+    const res = await fetch('/api/me');
+    if (!res.ok) { window.location.href = '/login'; return; }
+    const user = await res.json();
+    const el = document.getElementById('headerUser');
+    const adminLink = user.is_admin
+      ? `<a href="/admin" style="color:#90cdf4;font-weight:600;">관리자</a>` : '';
+    el.innerHTML = `
+      ${adminLink}
+      <span style="opacity:.8;">👤 ${user.username}</span>
+      <button onclick="doLogout()" style="padding:6px 14px;border:1px solid rgba(255,255,255,.4);border-radius:7px;background:rgba(255,255,255,.12);color:#fff;font-size:.82rem;font-weight:600;cursor:pointer;">로그아웃</button>
+    `;
+  } catch { window.location.href = '/login'; }
+})();
+
+async function doLogout() {
+  await fetch('/auth/logout', { method: 'POST' });
+  window.location.href = '/login';
+}
+
+// ── 파일 선택 ──────────────────────────────────
+const fileInput  = document.getElementById('fileInput');
+const dropZone   = document.getElementById('dropZone');
+const browseBtn  = document.getElementById('browseBtn');
+const fileSelected = document.getElementById('fileSelected');
+const fileNameEl = document.getElementById('fileName');
+const parseBtn   = document.getElementById('parseBtn');
+const exportBtn  = document.getElementById('exportBtn');
+const applyBaseBtn = document.getElementById('applyBaseBtn');
+let selectedFile = null;
+let currentData = null;
+let appliedBaseLength = 0;
+
+browseBtn.addEventListener('click', () => fileInput.click());
+dropZone.addEventListener('click', () => fileInput.click());
+
+fileInput.addEventListener('change', () => {
+  if (fileInput.files[0]) setFile(fileInput.files[0]);
+});
+
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('drag-over');
+  const f = e.dataTransfer.files[0];
+  if (f) setFile(f);
+});
+
+function setFile(f) {
+  selectedFile = f;
+  fileNameEl.textContent = f.name;
+  fileSelected.classList.add('show');
+  parseBtn.disabled = false;
+  exportBtn.disabled = false;
+  applyBaseBtn.disabled = true;
+  currentData = null;
+  appliedBaseLength = 0;
+  document.getElementById('baseLength').value = '';
+  hideError();
+  document.getElementById('result').style.display = 'none';
+}
+
+// ── 에러 표시 ─────────────────────────────────
+function showError(msg) {
+  const box = document.getElementById('error-box');
+  box.textContent = '⚠️  ' + msg;
+  box.style.display = 'block';
+}
+function hideError() {
+  document.getElementById('error-box').style.display = 'none';
+}
+
+// ── 파일 분석 ─────────────────────────────────
+parseBtn.addEventListener('click', async () => {
+  if (!selectedFile) return;
+  hideError();
+  document.getElementById('loading').style.display = 'block';
+  document.getElementById('result').style.display = 'none';
+
+  const form = new FormData();
+  form.append('file', selectedFile);
+
+  try {
+    const res = await fetch('/api/parse', { method: 'POST', body: form });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.detail || '서버 오류');
+    }
+    const data = await res.json();
+    currentData = data;
+    appliedBaseLength = 0;
+    renderAll(data);
+    applyBaseBtn.disabled = false;
+    document.getElementById('result').style.display = 'block';
+  } catch (e) {
+    showError(e.message);
+  } finally {
+    document.getElementById('loading').style.display = 'none';
+  }
+});
+
+// ── 기본 길이 적용 ─────────────────────────────
+applyBaseBtn.addEventListener('click', () => {
+  if (!currentData) {
+    showError('먼저 파일 분석을 해주세요.');
+    return;
+  }
+  const raw = document.getElementById('baseLength').value.trim();
+  const baseLength = Number(raw);
+  if (!raw || !Number.isInteger(baseLength) || baseLength <= 0) {
+    showError('기본 길이는 1 이상의 정수로 입력해 주세요.');
+    return;
+  }
+  hideError();
+  appliedBaseLength = baseLength;
+  renderGameData(currentData.game_data, appliedBaseLength);
+});
+
+// ── CSV 다운로드 ───────────────────────────────
+exportBtn.addEventListener('click', async () => {
+  if (!selectedFile) return;
+  const baseLength = parseInt(document.getElementById('baseLength').value) || 0;
+  const form = new FormData();
+  form.append('file', selectedFile);
+  form.append('base_length', baseLength);
+
+  try {
+    const res = await fetch('/api/export-csv', { method: 'POST', body: form });
+    if (!res.ok) {
+      const text = await res.text();
+      let message = 'CSV 생성 오류';
+      try {
+        const parsed = JSON.parse(text);
+        message = parsed.detail || message;
+      } catch (_ignore) {
+        if (text && text.trim()) {
+          message = text.trim();
+        }
+      }
+      throw new Error(message);
+    }
+    const blob = await res.blob();
+    const disposition = res.headers.get('content-disposition') || '';
+    let fname = '게임데이터.csv';
+    const utfMatch = disposition.match(/filename\*=UTF-8''([^;]+)/i);
+    const basicMatch = disposition.match(/filename="?([^"]+)"?/i);
+    if (utfMatch) fname = decodeURIComponent(utfMatch[1]);
+    else if (basicMatch) fname = basicMatch[1];
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = fname; a.click();
+    URL.revokeObjectURL(url);
+  } catch (e) {
+    showError(e.message);
+  }
+});
+
+// ── 탭 전환 ───────────────────────────────────
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+  });
+});
+
+// ── 팀 탭 전환 ────────────────────────────────
+document.getElementById('homeTabBtn').addEventListener('click', () => {
+  document.getElementById('homeTabBtn').classList.add('active');
+  document.getElementById('awayTabBtn').classList.remove('active');
+  document.getElementById('players-home-wrap').style.display = '';
+  document.getElementById('players-away-wrap').style.display = 'none';
+});
+document.getElementById('awayTabBtn').addEventListener('click', () => {
+  document.getElementById('awayTabBtn').classList.add('active');
+  document.getElementById('homeTabBtn').classList.remove('active');
+  document.getElementById('players-away-wrap').style.display = '';
+  document.getElementById('players-home-wrap').style.display = 'none';
+});
+
+// ── 렌더링 ────────────────────────────────────
+function renderAll(data) {
+  renderGameInfo(data.game_info);
+  renderGameData(data.game_data, appliedBaseLength);
+  renderPlayers(data.players);
+  renderCombinations(data.combinations);
+  renderSetterCalls(data.setter_calls);
+  // 첫 탭으로 리셋
+  document.querySelectorAll('.tab-btn').forEach((b,i) => b.classList.toggle('active', i===0));
+  document.querySelectorAll('.tab-panel').forEach((p,i) => p.classList.toggle('active', i===0));
+}
+
+function esc(v) {
+  return String(v ?? '-').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function renderGameInfo(sections) {
+  const el = document.getElementById('tab-gameinfo');
+  el.innerHTML = '';
+  sections.forEach(sec => {
+    const div = document.createElement('div');
+    div.className = 'info-section';
+    div.innerHTML = `<h3>[${esc(sec.name)}] ${esc(sec.title)}</h3>`;
+    if (sec.type === 'table') {
+      const wrap = document.createElement('div');
+      wrap.className = 'table-wrap';
+      let html = '<table><thead><tr>' + sec.headers.map(h => `<th>${esc(h)}</th>`).join('') + '</tr></thead><tbody>';
+      sec.rows.forEach(r => { html += '<tr>' + r.map(c => `<td>${esc(c)}</td>`).join('') + '</tr>'; });
+      html += '</tbody></table>';
+      wrap.innerHTML = html;
+      div.appendChild(wrap);
+    } else {
+      sec.rows.forEach(r => {
+        const row = document.createElement('div');
+        row.className = 'kv-row';
+        row.innerHTML = `<span class="kv-key">${esc(r.key)}</span><span class="kv-val">${esc(r.value)}</span>`;
+        div.appendChild(row);
+      });
+    }
+    el.appendChild(div);
+  });
+}
+
+function parseTimeToSeconds(timeText) {
+  const text = String(timeText || '').trim();
+  if (!/^\d+\.\d{2}\.\d{2}$/.test(text)) return null;
+  const parts = text.split('.');
+  const hh = Number(parts[0]);
+  const mm = Number(parts[1]);
+  const ss = Number(parts[2]);
+  if ([hh, mm, ss].some(n => Number.isNaN(n))) return null;
+  return hh * 3600 + mm * 60 + ss;
+}
+
+function computePositionFromFirstRow(rows) {
+  if (!rows.length) return [];
+  const ref = parseTimeToSeconds(rows[0].time);
+  const positions = [0];
+  for (let i = 1; i < rows.length; i += 1) {
+    const cur = parseTimeToSeconds(rows[i].time);
+    if (ref === null || cur === null) {
+      positions.push('-');
+    } else {
+      positions.push((cur - ref) * 1000);
+    }
+  }
+  return positions;
+}
+
+function renderGameData(rows, baseLength) {
+  const tbody = document.getElementById('game-tbody');
+  const theadRow = document.querySelector('#game-table thead tr');
+  const applied = Number.isInteger(baseLength) && baseLength > 0;
+  const positions = applied ? computePositionFromFirstRow(rows) : [];
+  const periodValue = applied ? baseLength * 1000 : null;
+
+  let headerHtml = '<th>No</th>';
+  if (applied) {
+    headerHtml += '<th>위치</th><th>기간</th>';
+  }
+  headerHtml += '<th>팀</th><th>선수이름</th>';
+  if (applied) {
+    headerHtml += '<th>이름</th>';
+  }
+  headerHtml += '<th>기본기술</th><th>타구유형</th><th>결과</th><th>콤비</th><th>타임</th><th>세트</th>';
+  theadRow.innerHTML = headerHtml;
+
+  tbody.innerHTML = rows.map((r, index) => {
+    let rowHtml = `<tr><td>${esc(r.no)}</td>`;
+    if (applied) {
+      rowHtml += `<td>${esc(positions[index])}</td><td>${esc(periodValue)}</td>`;
+    }
+    rowHtml += `<td>${esc(r.team)}</td><td>${esc(r.player)}</td>`;
+    if (applied) {
+      rowHtml += `<td>${esc(r.player)}</td>`;
+    }
+    rowHtml += `<td><span class="badge badge-blue">${esc(r.skill)}</span></td>
+      <td>${esc(r.shot)}</td>
+      <td>${esc(r.result)}</td>
+      <td>${esc(r.combo)}</td>
+      <td>${esc(r.time)}</td>
+      <td>${esc(r.set)}</td>
+    </tr>`;
+    return rowHtml;
+  }).join('');
+  makeTableSortable(document.getElementById('game-table'));
+}
+
+function renderPlayers(players) {
+  renderTeamTable('players-home-wrap', players.home);
+  renderTeamTable('players-away-wrap', players.away);
+}
+
+function renderTeamTable(wrapperId, team) {
+  const wrap = document.getElementById(wrapperId);
+  const setHeaders = Array.from({length: team.set_count}, (_, i) => `${i+1}세트`);
+  let html = `<p style="margin-bottom:10px;font-weight:600;color:#0f3460;">${esc(team.name)} (${esc(team.code)})</p>
+    <div class="table-wrap"><table id="table-${wrapperId}">
+    <thead><tr>
+      <th>No</th><th>이름</th><th>영문명</th>
+      ${setHeaders.map(h=>`<th>${esc(h)}</th>`).join('')}
+      <th>합계</th>
+    </tr></thead><tbody>`;
+  team.players.forEach(p => {
+    html += `<tr>
+      <td>${esc(p.number)}</td>
+      <td>${esc(p.name)}</td>
+      <td>${esc(p.player_id)}</td>
+      ${p.set_scores.map(s=>`<td>${esc(s)}</td>`).join('')}
+      <td><strong>${esc(p.total)}</strong></td>
+    </tr>`;
+  });
+  html += '</tbody></table></div>';
+  wrap.innerHTML = html;
+  makeTableSortable(document.getElementById('table-' + wrapperId));
+}
+
+function renderCombinations(rows) {
+  document.getElementById('combo-tbody').innerHTML = rows.map(r =>
+    `<tr><td>${esc(r.code)}</td><td>${esc(r.field)}</td><td>${esc(r.description)}</td><td>${esc(r.other)}</td></tr>`
+  ).join('');
+}
+
+function renderSetterCalls(rows) {
+  document.getElementById('setter-tbody').innerHTML = rows.map(r =>
+    `<tr><td>${esc(r.code)}</td><td>${esc(r.description)}</td><td>${esc(r.other)}</td></tr>`
+  ).join('');
+}
+
+// ── 테이블 정렬 ───────────────────────────────
+function makeTableSortable(table) {
+  if (!table) return;
+  const headers = table.querySelectorAll('thead th');
+  headers.forEach((th, col) => {
+    let asc = true;
+    th.addEventListener('click', () => {
+      const tbody = table.querySelector('tbody');
+      const rows = Array.from(tbody.querySelectorAll('tr'));
+      rows.sort((a, b) => {
+        const av = a.cells[col]?.textContent.trim() ?? '';
+        const bv = b.cells[col]?.textContent.trim() ?? '';
+        const an = parseFloat(av), bn = parseFloat(bv);
+        if (!isNaN(an) && !isNaN(bn)) return asc ? an - bn : bn - an;
+        return asc ? av.localeCompare(bv, 'ko') : bv.localeCompare(av, 'ko');
+      });
+      rows.forEach(r => tbody.appendChild(r));
+      headers.forEach(h => h.textContent = h.textContent.replace(/ [▲▼]$/, ''));
+      th.textContent += asc ? ' ▲' : ' ▼';
+      asc = !asc;
+    });
+  });
+}
+</script>
+</body>
+</html>

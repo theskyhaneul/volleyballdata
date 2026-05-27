@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>로그인 — 배구 데이터 변환기</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', 'Malgun Gothic', sans-serif;
+      background: linear-gradient(135deg, #1a1a2e 0%, #0f3460 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .card {
+      background: #fff;
+      border-radius: 20px;
+      padding: 44px 40px 36px;
+      width: 100%;
+      max-width: 420px;
+      box-shadow: 0 20px 60px rgba(0,0,0,.35);
+    }
+    .logo { text-align: center; font-size: 42px; margin-bottom: 8px; }
+    h1 { text-align: center; font-size: 1.3rem; color: #1a1a2e; margin-bottom: 4px; }
+    .sub { text-align: center; font-size: .82rem; color: #a0aec0; margin-bottom: 28px; }
+
+    /* 탭 */
+    .tab-switch {
+      display: flex;
+      background: #f0f4f8;
+      border-radius: 10px;
+      padding: 4px;
+      margin-bottom: 24px;
+      gap: 4px;
+    }
+    .tab-switch button {
+      flex: 1;
+      padding: 9px;
+      border: none;
+      border-radius: 8px;
+      font-size: .88rem;
+      font-weight: 600;
+      cursor: pointer;
+      background: transparent;
+      color: #718096;
+      transition: background .15s, color .15s;
+    }
+    .tab-switch button.active { background: #fff; color: #0f3460; box-shadow: 0 1px 4px rgba(0,0,0,.1); }
+
+    .form-section { display: none; }
+    .form-section.active { display: block; }
+
+    label { display: block; font-size: .83rem; font-weight: 600; color: #4a5568; margin-bottom: 5px; }
+    input[type=text], input[type=password] {
+      width: 100%;
+      padding: 11px 14px;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 9px;
+      font-size: .93rem;
+      outline: none;
+      transition: border-color .2s;
+      margin-bottom: 14px;
+    }
+    input:focus { border-color: #0f3460; }
+
+    .btn {
+      width: 100%;
+      padding: 13px;
+      border: none;
+      border-radius: 10px;
+      font-size: .97rem;
+      font-weight: 700;
+      cursor: pointer;
+      background: #0f3460;
+      color: #fff;
+      transition: opacity .15s;
+      margin-top: 4px;
+    }
+    .btn:hover { opacity: .88; }
+
+    .msg {
+      display: none;
+      margin-top: 14px;
+      padding: 11px 14px;
+      border-radius: 9px;
+      font-size: .87rem;
+      text-align: center;
+    }
+    .msg.success { background: #c6f6d5; color: #276749; display: block; }
+    .msg.error   { background: #fff5f5; color: #c53030; display: block; }
+    .msg.info    { background: #ebf8ff; color: #2b6cb0; display: block; }
+  </style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">🏐</div>
+  <h1>배구 데이터 변환기</h1>
+  <p class="sub">Data Volley → Dartfish CSV</p>
+
+  <div class="tab-switch">
+    <button class="active" id="tabLoginBtn" onclick="switchTab('login')">로그인</button>
+    <button id="tabRegisterBtn" onclick="switchTab('register')">회원가입</button>
+  </div>
+
+  <!-- 로그인 폼 -->
+  <div class="form-section active" id="loginSection">
+    <label for="loginId">아이디</label>
+    <input type="text" id="loginId" placeholder="아이디 입력" autocomplete="username" />
+    <label for="loginPw">비밀번호</label>
+    <input type="password" id="loginPw" placeholder="비밀번호 입력" autocomplete="current-password" />
+    <button class="btn" onclick="doLogin()">로그인</button>
+    <div class="msg" id="loginMsg"></div>
+  </div>
+
+  <!-- 회원가입 폼 -->
+  <div class="form-section" id="registerSection">
+    <label for="regId">아이디 (3자 이상)</label>
+    <input type="text" id="regId" placeholder="사용할 아이디 입력" autocomplete="username" />
+    <label for="regPw">비밀번호 (6자 이상)</label>
+    <input type="password" id="regPw" placeholder="비밀번호 입력" autocomplete="new-password" />
+    <label for="regPw2">비밀번호 확인</label>
+    <input type="password" id="regPw2" placeholder="비밀번호 재입력" autocomplete="new-password" />
+    <button class="btn" onclick="doRegister()">가입 신청</button>
+    <div class="msg" id="registerMsg"></div>
+  </div>
+</div>
+
+<script>
+function switchTab(tab) {
+  document.getElementById('loginSection').classList.toggle('active', tab === 'login');
+  document.getElementById('registerSection').classList.toggle('active', tab === 'register');
+  document.getElementById('tabLoginBtn').classList.toggle('active', tab === 'login');
+  document.getElementById('tabRegisterBtn').classList.toggle('active', tab === 'register');
+}
+
+function showMsg(id, text, type) {
+  const el = document.getElementById(id);
+  el.textContent = text;
+  el.className = 'msg ' + type;
+}
+
+async function doLogin() {
+  const username = document.getElementById('loginId').value.trim();
+  const password = document.getElementById('loginPw').value;
+  if (!username || !password) { showMsg('loginMsg', '아이디와 비밀번호를 입력해 주세요.', 'error'); return; }
+
+  const form = new FormData();
+  form.append('username', username);
+  form.append('password', password);
+
+  try {
+    const res = await fetch('/auth/login', { method: 'POST', body: form });
+    const data = await res.json();
+    if (!res.ok) { showMsg('loginMsg', data.detail || '로그인 실패', 'error'); return; }
+    showMsg('loginMsg', '로그인 성공! 이동 중...', 'success');
+    setTimeout(() => {
+      window.location.href = data.is_admin ? '/admin' : '/';
+    }, 600);
+  } catch {
+    showMsg('loginMsg', '서버 오류가 발생했습니다.', 'error');
+  }
+}
+
+async function doRegister() {
+  const username = document.getElementById('regId').value.trim();
+  const password = document.getElementById('regPw').value;
+  const password2 = document.getElementById('regPw2').value;
+  if (!username || !password || !password2) { showMsg('registerMsg', '모든 항목을 입력해 주세요.', 'error'); return; }
+
+  const form = new FormData();
+  form.append('username', username);
+  form.append('password', password);
+  form.append('password2', password2);
+
+  try {
+    const res = await fetch('/auth/register', { method: 'POST', body: form });
+    const data = await res.json();
+    if (!res.ok) { showMsg('registerMsg', data.detail || '가입 실패', 'error'); return; }
+    showMsg('registerMsg', '가입 신청 완료! 관리자 승인 후 로그인하세요.', 'info');
+    document.getElementById('regId').value = '';
+    document.getElementById('regPw').value = '';
+    document.getElementById('regPw2').value = '';
+  } catch {
+    showMsg('registerMsg', '서버 오류가 발생했습니다.', 'error');
+  }
+}
+
+// Enter 키 로그인
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Enter') return;
+  if (document.getElementById('loginSection').classList.contains('active')) doLogin();
+  else doRegister();
+});
+</script>
+</body>
+</html>

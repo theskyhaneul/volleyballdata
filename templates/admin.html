@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>관리자 — 배구 데이터 변환기</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', 'Malgun Gothic', sans-serif; background: #f0f4f8; color: #1a1a2e; }
+
+    header {
+      background: linear-gradient(135deg, #1a1a2e 0%, #0f3460 100%);
+      color: #fff;
+      padding: 18px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .header-left { display: flex; align-items: center; gap: 12px; }
+    .header-left h1 { font-size: 1.1rem; font-weight: 700; }
+    .header-left span { font-size: 22px; }
+    .header-right { display: flex; gap: 10px; }
+
+    .btn {
+      padding: 8px 18px;
+      border: none;
+      border-radius: 8px;
+      font-size: .85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity .15s;
+    }
+    .btn:hover { opacity: .82; }
+    .btn-light   { background: rgba(255,255,255,.15); color: #fff; border: 1px solid rgba(255,255,255,.3); }
+    .btn-approve { background: #276749; color: #fff; }
+    .btn-reject  { background: #744210; color: #fff; }
+    .btn-delete  { background: #9b2c2c; color: #fff; }
+
+    main { max-width: 960px; margin: 32px auto; padding: 0 16px; }
+
+    .section-title {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #1a1a2e;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .badge-count {
+      background: #0f3460;
+      color: #fff;
+      border-radius: 99px;
+      font-size: .75rem;
+      padding: 2px 9px;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 14px;
+      box-shadow: 0 2px 14px rgba(0,0,0,.08);
+      overflow: hidden;
+      margin-bottom: 28px;
+    }
+
+    table { width: 100%; border-collapse: collapse; font-size: .88rem; }
+    thead th {
+      background: #1a1a2e;
+      color: #fff;
+      padding: 11px 16px;
+      text-align: left;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    tbody tr:nth-child(even) { background: #f7fafc; }
+    tbody tr:hover { background: #ebf8ff; }
+    tbody td { padding: 10px 16px; border-bottom: 1px solid #f0f0f0; vertical-align: middle; }
+
+    .status-badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 99px;
+      font-size: .78rem;
+      font-weight: 700;
+    }
+    .status-approved { background: #c6f6d5; color: #276749; }
+    .status-pending  { background: #fefcbf; color: #744210; }
+    .status-admin    { background: #bee3f8; color: #2b6cb0; }
+
+    .actions { display: flex; gap: 6px; flex-wrap: wrap; }
+
+    .empty { text-align: center; padding: 32px; color: #a0aec0; font-size: .9rem; }
+
+    #toast {
+      position: fixed;
+      bottom: 28px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #1a1a2e;
+      color: #fff;
+      padding: 12px 24px;
+      border-radius: 10px;
+      font-size: .9rem;
+      display: none;
+      z-index: 1000;
+      box-shadow: 0 4px 16px rgba(0,0,0,.3);
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-left">
+    <span>🏐</span>
+    <h1>관리자 페이지</h1>
+  </div>
+  <div class="header-right">
+    <button class="btn btn-light" onclick="window.location.href='/'">← 메인으로</button>
+    <button class="btn btn-light" onclick="doLogout()">로그아웃</button>
+  </div>
+</header>
+
+<main>
+  <div class="section-title">
+    👥 사용자 관리
+    <span class="badge-count" id="userCount">0</span>
+  </div>
+
+  <div class="card">
+    <table id="userTable">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>아이디</th>
+          <th>상태</th>
+          <th>가입일시</th>
+          <th>관리</th>
+        </tr>
+      </thead>
+      <tbody id="userTbody">
+        <tr><td colspan="5" class="empty">불러오는 중...</td></tr>
+      </tbody>
+    </table>
+  </div>
+</main>
+
+<div id="toast"></div>
+
+<script>
+async function loadUsers() {
+  try {
+    const res = await fetch('/admin/users');
+    if (res.status === 401 || res.status === 403) {
+      window.location.href = '/login';
+      return;
+    }
+    const users = await res.json();
+    document.getElementById('userCount').textContent = users.length;
+    renderUsers(users);
+  } catch {
+    document.getElementById('userTbody').innerHTML =
+      '<tr><td colspan="5" class="empty">불러오기 실패</td></tr>';
+  }
+}
+
+function renderUsers(users) {
+  const tbody = document.getElementById('userTbody');
+  if (!users.length) {
+    tbody.innerHTML = '<tr><td colspan="5" class="empty">등록된 사용자가 없습니다.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = users.map(u => {
+    let statusBadge = '';
+    if (u.is_admin)         statusBadge += '<span class="status-badge status-admin">관리자</span> ';
+    if (u.is_approved)      statusBadge += '<span class="status-badge status-approved">승인됨</span>';
+    else                    statusBadge += '<span class="status-badge status-pending">승인 대기</span>';
+
+    const approveBtn = !u.is_approved
+      ? `<button class="btn btn-approve" onclick="approve(${u.id})">승인</button>`
+      : `<button class="btn btn-reject"  onclick="reject(${u.id})">승인 취소</button>`;
+
+    const deleteBtn = u.is_admin ? '' :
+      `<button class="btn btn-delete" onclick="deleteUser(${u.id}, '${esc(u.username)}')">삭제</button>`;
+
+    return `<tr>
+      <td>${u.id}</td>
+      <td><strong>${esc(u.username)}</strong></td>
+      <td>${statusBadge}</td>
+      <td>${esc(u.created_at)}</td>
+      <td><div class="actions">${approveBtn}${deleteBtn}</div></td>
+    </tr>`;
+  }).join('');
+}
+
+function esc(v) {
+  return String(v ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.display = 'block';
+  setTimeout(() => { t.style.display = 'none'; }, 2200);
+}
+
+async function approve(id) {
+  await fetch(`/admin/users/${id}/approve`, { method: 'POST' });
+  showToast('✅ 승인 완료');
+  loadUsers();
+}
+
+async function reject(id) {
+  await fetch(`/admin/users/${id}/reject`, { method: 'POST' });
+  showToast('⚠️ 승인 취소');
+  loadUsers();
+}
+
+async function deleteUser(id, name) {
+  if (!confirm(`"${name}" 계정을 삭제하시겠습니까?`)) return;
+  await fetch(`/admin/users/${id}`, { method: 'DELETE' });
+  showToast('🗑️ 삭제 완료');
+  loadUsers();
+}
+
+async function doLogout() {
+  await fetch('/auth/logout', { method: 'POST' });
+  window.location.href = '/login';
+}
+
+loadUsers();
+</script>
+</body>
+</html>
