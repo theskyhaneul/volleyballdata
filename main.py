@@ -43,7 +43,8 @@ STATIC_DIR = ROOT / "static"
 STATIC_DIR.mkdir(exist_ok=True)
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
-templates = Jinja2Templates(directory=str(ROOT / "templates"))
+# Python 3.14 + Jinja2 기본 캐시 조합에서 TypeError가 나므로 cache_size=0
+templates = Jinja2Templates(directory=str(ROOT / "templates"), cache_size=0)
 
 app.include_router(auth_router)
 app.include_router(admin_router)
