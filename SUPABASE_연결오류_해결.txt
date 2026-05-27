@@ -79,4 +79,26 @@ Connection string 의 사용자 이름:
 여전히 실패하면 Direct connection (5432, db.xxx.supabase.co) 으로 시도하세요.
 
 
+■ password authentication failed for user "postgres"
+--------------------------------------------------------------------------------
+→ 비밀번호가 틀렸거나, URL 에서 비밀번호가 잘림 (# 특수문자 때문)
+
+【해결 A — 추천】 Render 에 DATABASE_URL 대신 아래 4개 사용:
+
+  SUPABASE_DB_HOST     = db.xxxxx.supabase.co   (Direct connection 호스트)
+  SUPABASE_DB_PASSWORD = (Supabase DB 비밀번호 그대로, # 포함 가능)
+  SUPABASE_DB_USER     = postgres
+  SUPABASE_DB_PORT     = 5432
+
+  DATABASE_URL 은 비우거나 삭제
+
+【해결 B】 Supabase 에서 DB 비밀번호 재설정
+  1. Project Settings → Database → Reset database password
+  2. # @ 없는 새 비밀번호로 설정 (테스트용)
+  3. Direct connection URI [Copy] → Render DATABASE_URL
+
+비밀번호 확인:
+  Supabase → Database → Database password → Reveal
+
+
 ================================================================================

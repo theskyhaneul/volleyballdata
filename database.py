@@ -94,8 +94,33 @@ def _postgres_url() -> str | None:
     return url
 
 
+def _postgres_params() -> dict | None:
+    """비밀번호에 # 등 특수문자가 있을 때 URL 대신 개별 환경변수 사용."""
+    host = os.environ.get("SUPABASE_DB_HOST", "").strip()
+    password = os.environ.get("SUPABASE_DB_PASSWORD", "").strip()
+    if not host or not password:
+        return None
+
+    user = os.environ.get("SUPABASE_DB_USER", "postgres").strip()
+    port = int(os.environ.get("SUPABASE_DB_PORT", "5432") or "5432")
+    dbname = os.environ.get("SUPABASE_DB_NAME", "postgres").strip()
+    project_ref = os.environ.get("SUPABASE_PROJECT_REF", "").strip()
+
+    if "pooler.supabase.com" in host and user == "postgres" and project_ref:
+        user = f"postgres.{project_ref}"
+
+    return {
+        "host": host,
+        "user": user,
+        "password": password,
+        "port": port,
+        "dbname": dbname,
+        "sslmode": "require",
+    }
+
+
 def using_postgres() -> bool:
-    return _postgres_url() is not None
+    return _postgres_params() is not None or _postgres_url() is not None
 
 
 def _adapt_sql(sql: str) -> str:
@@ -135,12 +160,16 @@ class DbConnection:
 
 @contextmanager
 def get_conn() -> Iterator[DbConnection]:
-    pg_url = _postgres_url()
-    if pg_url:
+    pg_params = _postgres_params()
+    pg_url = None if pg_params else _postgres_url()
+    if pg_params or pg_url:
         import psycopg2
         from psycopg2.extras import RealDictCursor
 
-        raw = psycopg2.connect(pg_url, cursor_factory=RealDictCursor)
+        if pg_params:
+            raw = psycopg2.connect(cursor_factory=RealDictCursor, **pg_params)
+        else:
+            raw = psycopg2.connect(pg_url, cursor_factory=RealDictCursor)
         conn = DbConnection(raw)
         try:
             yield conn
