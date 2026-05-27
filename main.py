@@ -39,8 +39,12 @@ from src.setter_parser import parse_setter_calls
 
 # ── 앱 초기화 ─────────────────────────────────────
 app = FastAPI(title="배구 데이터 변환기")
-app.mount("/static", StaticFiles(directory="static"), name="static")
-templates = Jinja2Templates(directory="templates")
+
+STATIC_DIR = ROOT / "static"
+STATIC_DIR.mkdir(exist_ok=True)
+app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+
+templates = Jinja2Templates(directory=str(ROOT / "templates"))
 
 app.include_router(auth_router)
 app.include_router(admin_router)
@@ -48,6 +52,11 @@ app.include_router(admin_router)
 init_db()
 
 COOKIE_NAME = "access_token"
+
+
+@app.get("/health")
+async def health():
+    return {"status": "ok"}
 
 
 # ── 인증 헬퍼 ─────────────────────────────────────
