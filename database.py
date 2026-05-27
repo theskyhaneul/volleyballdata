@@ -41,6 +41,24 @@ CREATE TABLE IF NOT EXISTS users (
 """
 
 
+def _maybe_fix_pooler_username(url: str) -> str:
+    """pooler 주소인데 사용자명이 postgres 만 있으면 postgres.<프로젝트ID> 로 보정."""
+    parsed = urlparse(url)
+    if not parsed.hostname or "pooler.supabase.com" not in parsed.hostname:
+        return url
+    if parsed.username and parsed.username != "postgres":
+        return url
+
+    project_ref = os.environ.get("SUPABASE_PROJECT_REF", "").strip()
+    if not project_ref:
+        return url
+
+    # postgresql://postgres:비밀번호@host... → postgresql://postgres.REF:비밀번호@host...
+    return url.replace("postgresql://postgres:", f"postgresql://postgres.{project_ref}:", 1).replace(
+        "postgres://postgres:", f"postgres://postgres.{project_ref}:", 1
+    )
+
+
 def _validate_postgres_url(url: str) -> None:
     """자주 나는 Supabase 연결 문자열 오류를 미리 안내."""
     lowered = url.lower()
@@ -56,10 +74,10 @@ def _validate_postgres_url(url: str) -> None:
 
     if "pooler.supabase.com" in host and user == "postgres":
         raise RuntimeError(
-            "Transaction/Session pooler(포트 6543/5432)는 사용자 이름이 "
-            "'postgres'가 아니라 'postgres.프로젝트ID' 형식이어야 합니다. "
-            "Supabase → Project Settings → Database → Connection string → URI 에서 "
-            "표시되는 전체 문자열을 그대로 복사하세요."
+            "Supabase pooler 연결 오류(ENOIDENTIFIER): 사용자 이름이 'postgres'만 있으면 안 됩니다. "
+            "① Supabase → Database → Connection string → URI 전체를 Copy 하거나, "
+            "② Render에 SUPABASE_PROJECT_REF(프로젝트 ID) 환경변수를 추가하거나, "
+            "③ Direct connection(db.xxx.supabase.co, 사용자 postgres) URI를 사용하세요."
         )
 
 
@@ -69,6 +87,7 @@ def _postgres_url() -> str | None:
         return None
     if url.startswith("postgres://"):
         url = "postgresql://" + url[len("postgres://") :]
+    url = _maybe_fix_pooler_username(url)
     _validate_postgres_url(url)
     if "sslmode=" not in url:
         url += ("&" if "?" in url else "?") + "sslmode=require"

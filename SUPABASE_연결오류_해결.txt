@@ -7,13 +7,19 @@
 --------------------------------------------------------------------------------
 Render 의 DATABASE_URL 이 잘못되었습니다.
 
+에러: no tenant identifier provided (ENOIDENTIFIER)
+  → pooler 주소인데 사용자 이름이 postgres 만 있을 때 발생
+
 1) 예시 그대로 넣음
      postgres.xxxxx  ← xxxxx 는 예시입니다. 실제 프로젝트 ID 로 바꿔야 함
 
 2) Pooler 주소인데 사용자 이름이 postgres 만 있음
-     (잘못) postgresql://postgres:비밀번호@...pooler...:6543/postgres
-     (올바름) postgresql://postgres.abcdefghijk:비밀번호@...pooler...:6543/postgres
+     (잘못) postgresql://postgres:비밀번호@...pooler...:5432/postgres
+     (올바름) postgresql://postgres.abcdefghijk:비밀번호@...pooler...:5432/postgres
               ↑ postgres. + 프로젝트 Reference ID
+
+3) 비밀번호에 # 있음
+     URL 에서 # 뒤가 잘립니다 → Supabase [Copy] 로 통째로 복사
 
 
 ■ 올바른 DATABASE_URL 다시 복사하기
@@ -44,6 +50,12 @@ Render 의 DATABASE_URL 이 잘못되었습니다.
    (직접 타이핑하지 말 것)
 
 7. Render → Environment → DATABASE_URL 값 전체를 새로 붙여넣기
+
+   (또는 pooler 를 쓸 때 보조 방법)
+   Key: SUPABASE_PROJECT_REF
+   Value: Supabase 주소창 project/ 뒤의 영문 ID (예: abcdefghijklmnop)
+   → DATABASE_URL 사용자명이 postgres 만 있어도 자동 보정 시도
+
 8. Save → Manual Deploy
 
 
