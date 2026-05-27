@@ -24,7 +24,13 @@
       gap: 14px;
       box-shadow: 0 2px 12px rgba(0,0,0,.3);
     }
-    header .logo { font-size: 28px; }
+    header .logo { flex-shrink: 0; }
+    .brand-logo {
+      height: 44px;
+      width: auto;
+      display: block;
+      object-fit: contain;
+    }
     header h1 { font-size: 1.35rem; font-weight: 700; letter-spacing: -.3px; }
     header p  { font-size: .8rem; opacity: .65; margin-top: 2px; }
 
@@ -253,7 +259,9 @@
 <body>
 
 <header>
-  <div class="logo">🏐</div>
+  <div class="logo">
+    <img src="/static/dartfish-logo.png" alt="Dartfish" class="brand-logo" />
+  </div>
   <div style="flex:1;">
     <h1>배구 데이터 변환기</h1>
     <p>Data Volley (.dvw) → Dartfish CSV</p>

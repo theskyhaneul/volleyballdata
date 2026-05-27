@@ -18,7 +18,12 @@
     }
     .header-left { display: flex; align-items: center; gap: 12px; }
     .header-left h1 { font-size: 1.1rem; font-weight: 700; }
-    .header-left span { font-size: 22px; }
+    .brand-logo {
+      height: 40px;
+      width: auto;
+      display: block;
+      object-fit: contain;
+    }
     .header-right { display: flex; gap: 10px; }
 
     .btn {
@@ -111,7 +116,7 @@
 
 <header>
   <div class="header-left">
-    <span>🏐</span>
+    <img src="/static/dartfish-logo.png" alt="Dartfish" class="brand-logo" />
     <h1>관리자 페이지</h1>
   </div>
   <div class="header-right">
