@@ -117,21 +117,22 @@ async def setup_admin(
     if len(password) < 6:
         raise HTTPException(status_code=400, detail="비밀번호는 6자 이상이어야 합니다.")
 
+    from database import using_postgres
+
     with get_conn() as conn:
         exists = conn.execute("SELECT id FROM users WHERE username = ?", (username,)).fetchone()
         if exists:
             conn.execute(
-                "UPDATE users SET is_admin = 1, is_approved = 1, password_hash = ? WHERE username = ?",
-                (hash_password(password), username),
+                "UPDATE users SET is_admin = ?, is_approved = ?, password_hash = ? WHERE username = ?",
+                (True if using_postgres() else 1, True if using_postgres() else 1, hash_password(password), username),
             )
             msg = f"'{username}' 관리자 계정이 갱신되었습니다. (비밀번호 포함)"
         else:
             conn.execute(
-                "INSERT INTO users (username, password_hash, is_approved, is_admin) VALUES (?, ?, 1, 1)",
-                (username, hash_password(password)),
+                "INSERT INTO users (username, password_hash, is_approved, is_admin) VALUES (?, ?, ?, ?)",
+                (username, hash_password(password), True if using_postgres() else 1, True if using_postgres() else 1),
             )
             msg = f"관리자 계정 '{username}'이 생성되었습니다."
-        conn.commit()
 
     return {"message": msg}
 

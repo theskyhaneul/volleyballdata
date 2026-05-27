@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Request
 
-from database import get_conn
+from database import get_conn, using_postgres
 from deps import require_admin
 
 router = APIRouter(prefix="/admin", tags=["admin"])
@@ -24,7 +24,10 @@ def list_users(request: Request):
 def approve_user(user_id: int, request: Request):
     require_admin(request)
     with get_conn() as conn:
-        conn.execute("UPDATE users SET is_approved = 1 WHERE id = ?", (user_id,))
+        conn.execute(
+            "UPDATE users SET is_approved = ? WHERE id = ?",
+            (True if using_postgres() else 1, user_id),
+        )
         conn.commit()
     return {"message": "승인 완료"}
 
@@ -33,7 +36,10 @@ def approve_user(user_id: int, request: Request):
 def reject_user(user_id: int, request: Request):
     require_admin(request)
     with get_conn() as conn:
-        conn.execute("UPDATE users SET is_approved = 0 WHERE id = ?", (user_id,))
+        conn.execute(
+            "UPDATE users SET is_approved = ? WHERE id = ?",
+            (False if using_postgres() else 0, user_id),
+        )
         conn.commit()
     return {"message": "승인 취소"}
 
