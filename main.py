@@ -68,6 +68,9 @@ async def login_page(request: Request):
 
 @app.get("/setup", response_class=HTMLResponse)
 async def setup_page(request: Request):
+    """SETUP_KEY가 Render 환경변수에 있을 때만 노출 (초기 관리자 생성용)."""
+    if not os.environ.get("SETUP_KEY"):
+        raise HTTPException(status_code=404, detail="Not Found")
     return templates.TemplateResponse("setup.html", {"request": request})
 
 
