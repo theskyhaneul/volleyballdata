@@ -54,7 +54,9 @@ init_db()
 
 @app.get("/health")
 async def health():
-    return {"status": "ok"}
+    from database import using_postgres
+
+    return {"status": "ok", "database": "postgres" if using_postgres() else "sqlite"}
 
 
 # ── 페이지 라우트 ──────────────────────────────────

@@ -31,10 +31,10 @@ with get_conn() as conn:
     exists = conn.execute("SELECT id FROM users WHERE username = ?", (username,)).fetchone()
     if exists:
         conn.execute(
-            "UPDATE users SET is_admin = 1, is_approved = 1 WHERE username = ?",
-            (username,),
+            "UPDATE users SET is_admin = 1, is_approved = 1, password_hash = ? WHERE username = ?",
+            (hash_password(password), username),
         )
-        print(f"기존 계정 '{username}'에 관리자 권한을 부여했습니다.")
+        print(f"기존 계정 '{username}' 관리자 권한·비밀번호 갱신 완료.")
     else:
         conn.execute(
             "INSERT INTO users (username, password_hash, is_approved, is_admin) VALUES (?, ?, 1, 1)",
